@@ -72,7 +72,7 @@ Create LinkedIn Post
 
 ### Complete n8n Workflow
 
-![RepoPost AI Workflow](workflow.png)
+![RepoPost AI Workflow](WorkFlow.png)
 
 ### LinkedIn Post Output
 
