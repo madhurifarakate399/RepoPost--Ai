@@ -1,0 +1,519 @@
+{
+  "name": "GitHub to LinkedIn AI Content Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/bedimcode/responsive-portfolio-website-Ansel",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f13f94c0-aa0d-4de7-88f9-cd760ca14cd3",
+      "name": "Get GitHub Repository",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        288,
+        -16
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "githubApi": {
+          "id": "Q8kLGnSQ77x5zfT0",
+          "name": "GitHub account"
+        }
+      },
+      "notes": "Demo repository: n8n-io/n8n. Change the URL to https://api.github.com/repos/OWNER/REPOSITORY to use your own public repository. No GitHub token is needed for basic public repository details."
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst repo = $input.first().json;\n\nconst topics = Array.isArray(repo.topics)\n  ? repo.topics.join(\", \")\n  : (repo.topics || \"\");\n\nconst prompt = `\nWrite one authentic, professional LinkedIn post about this GitHub repository.\n\nInclude the repository name, what it does, its description,\nmain programming language, GitHub stars, forks, topics,\nand repository URL wherever those details are available.\n\nExplain why the project may be useful. Use a strong opening,\nshort readable paragraphs, an invitation to explore the repository,\nand 3-5 relevant hashtags.\n\nUse only the supplied facts. Do not invent features or claim\nthat I built or contributed to this project.\nReturn only the LinkedIn post text.\n\nRepository: ${repo.full_name || repo.repo_name || \"\"}\nURL: ${repo.html_url || repo.repo_url || \"\"}\nDescription: ${repo.description || \"Not provided\"}\nMain language: ${repo.language || \"Not provided\"}\nStars: ${repo.stargazers_count ?? repo.stars ?? \"Not provided\"}\nForks: ${repo.forks_count ?? repo.forks ?? \"Not provided\"}\nTopics: ${topics || \"Not provided\"}\n`;\n\nreturn [{\n  json: {\n    repo_name: repo.full_name || repo.repo_name || \"\",\n    repo_url: repo.html_url || repo.repo_url || \"\",\n    description: repo.description || \"\",\n    language: repo.language || \"\",\n    stars: repo.stargazers_count ?? repo.stars ?? 0,\n    forks: repo.forks_count ?? repo.forks ?? 0,\n    topics,\n    prompt\n  }\n}];\n"
+      },
+      "id": "4a22f18a-ffac-4778-afeb-e8b0bd45789f",
+      "name": "Prepare Project Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -16
+      ],
+      "notesInFlow": true,
+      "notes": "Creates a prompt and structured fields from the GitHub API response. The next step uses a placeholder until you connect your chosen AI provider."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b15a3e2b-1e1a-4d83-9e3a-8d4c6e1f2001",
+              "name": "repo_name",
+              "value": "={{ $json.repo_name }}",
+              "type": "string"
+            },
+            {
+              "id": "b15a3e2b-1e1a-4d83-9e3a-8d4c6e1f2002",
+              "name": "repo_url",
+              "value": "={{ $json.repo_url }}",
+              "type": "string"
+            },
+            {
+              "id": "b15a3e2b-1e1a-4d83-9e3a-8d4c6e1f2003",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "b15a3e2b-1e1a-4d83-9e3a-8d4c6e1f2004",
+              "name": "language",
+              "value": "={{ $json.language }}",
+              "type": "string"
+            },
+            {
+              "id": "b15a3e2b-1e1a-4d83-9e3a-8d4c6e1f2005",
+              "name": "stars",
+              "value": "={{ $json.stars }}",
+              "type": "number"
+            },
+            {
+              "id": "b15a3e2b-1e1a-4d83-9e3a-8d4c6e1f2006",
+              "name": "topics",
+              "value": "={{ $json.topics }}",
+              "type": "string"
+            },
+            {
+              "id": "b15a3e2b-1e1a-4d83-9e3a-8d4c6e1f2007",
+              "name": "prompt",
+              "value": "={{ $json.prompt }}",
+              "type": "string"
+            },
+            {
+              "id": "b15a3e2b-1e1a-4d83-9e3a-8d4c6e1f2008",
+              "name": "status",
+              "value": "Draft - AI not connected",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a58d9274-e8d2-4534-95eb-0119a7b92fbc",
+      "name": "Prepare Draft Record",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1296,
+        144
+      ],
+      "notesInFlow": true,
+      "notes": "This starter workflow intentionally does not publish to LinkedIn or write to Google Sheets yet. Connect an AI node and your Google Sheets credentials after testing the GitHub retrieval."
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        672,
+        -80
+      ],
+      "id": "d721b8ee-11d9-4a07-8026-8dc2b57e4937",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        192
+      ],
+      "id": "fc7d5ada-2c69-4cf8-b546-921aa0a170a7",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ZL8hjqeisnXqD4mP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"repo_name\": \"{{ $('Prepare Project Details').item.json.repo_name }}\",\n  \"repo_url\": \"{{ $('Prepare Project Details').item.json.repo_url }}\",\n  \"linkedin_post\": \"{{ $json.text }}\",\n  \"status\": \"Pending Approval\",\n  \"generated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1152,
+        -48
+      ],
+      "id": "66643278-8587-4e65-b545-8dd4f15ee7ea",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst project = $('Prepare Project Details').first().json;\nconst ai = $('Basic LLM Chain').first().json;\n\nreturn [\n  {\n    json: {\n      repo_name: project.repo_name,\n      repo_url: project.repo_url,\n      linkedin_post: ai.text,\n      status: \"Pending Approval\",\n      generated_at: new Date().toISOString()\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        160
+      ],
+      "id": "9a0f9453-2d79-4e2f-8ab5-27b9820fdcf0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1K_10FLk5OhvE_KtNLhp-q3jAdTRUYa3OmVgjtIidzOA",
+          "mode": "list",
+          "cachedResultName": "GitHub LinkedIn Content Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1K_10FLk5OhvE_KtNLhp-q3jAdTRUYa3OmVgjtIidzOA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1K_10FLk5OhvE_KtNLhp-q3jAdTRUYa3OmVgjtIidzOA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "repo_name",
+              "displayName": "repo_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "repo_url",
+              "displayName": "repo_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "linkedin_post",
+              "displayName": "linkedin_post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "generated_at",
+              "displayName": "generated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        320
+      ],
+      "id": "58fc2d5c-f386-4eb0-9bef-e1d57cf525a1",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0LtV3ajaxZYAe5W6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "person": "8M_vWh1Ftd",
+        "text": "={{ $('Code in JavaScript').item.json.linkedin_post }}",
+        "shareMediaCategory": "IMAGE",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        144
+      ],
+      "id": "e891464d-62a6-45a9-bb64-13a1f13b4279",
+      "name": "Create a post",
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "kwnRQiSDxajpXBXL",
+          "name": "LinkedIn account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Get GitHub Repository').first().json.url }}/contents",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1520,
+        144
+      ],
+      "id": "0c6e8b31-b3da-4348-a621-cef09e049bb8",
+      "name": "Get Repository Files"
+    },
+    {
+      "parameters": {
+        "url": "=\t{{ $json.download_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1968,
+        144
+      ],
+      "id": "e5f2362e-de0e-4e98-9702-d59099fa3828",
+      "name": "Download Repository Image"
+    },
+    {
+      "parameters": {
+        "jsCode": "const files = $input.all();\n\nconst images = files.filter(item => {\n  const file = item.json;\n  const name = (file.name || \"\").toLowerCase();\n\n  return file.type === \"file\" &&\n    /\\.(png|jpe?g|webp|gif)$/i.test(name) &&\n    !!file.download_url;\n});\n\nif (images.length === 0) {\n  throw new Error(\n    \"No image found in this repository path. Check the repository files or search subfolders.\"\n  );\n}\n\nreturn [images[0]];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        -64
+      ],
+      "id": "2433284b-79f2-4e8f-ba2e-af245d9ce582",
+      "name": "Find Repository Image"
+    },
+    {
+      "parameters": {
+        "formTitle": "GitHub to LinkedIn Post",
+        "formDescription": "Enter a GitHub repository URL to generate a LinkedIn post with an image from that repository.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "GitHub Repository URL",
+              "fieldName": "repo_url",
+              "placeholder": "https://github.com/owner/repository",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        64,
+        -16
+      ],
+      "id": "6141b83c-0ed3-4c5b-8da6-c384edf9567a",
+      "name": "On form submission",
+      "webhookId": "7db570fa-5aed-48c7-bd77-780a55da510e"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get GitHub Repository": {
+      "main": [
+        [
+          {
+            "node": "Prepare Project Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Project Details": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Prepare Draft Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Draft Record": {
+      "main": [
+        [
+          {
+            "node": "Get Repository Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Repository Files": {
+      "main": [
+        [
+          {
+            "node": "Find Repository Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Repository Image": {
+      "main": [
+        [
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Repository Image": {
+      "main": [
+        [
+          {
+            "node": "Download Repository Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Get GitHub Repository",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c52a6551-d971-4f1e-974b-67da6b78863e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f064a0ad923eb17173d11b22b0567f7e5da7f1680e33f1fd95f7e6ad6290c55b"
+  },
+  "nodeGroups": [],
+  "id": "ihy7f0eEhCkymEle",
+  "tags": []
+}
